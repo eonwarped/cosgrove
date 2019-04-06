@@ -68,7 +68,7 @@ module Cosgrove
       details[DISCORD_IDS] ||= []
       details[DISCORD_IDS] << discord_id.to_i
       details[DISCORD_IDS] = details[DISCORD_IDS].uniq
-      
+
       Account.save_yml!
     end
     
@@ -106,7 +106,7 @@ module Cosgrove
       else
         # Initialize
         File.open(ACCOUNTS_FILE, 'w+') do |f|
-          f.write {}.to_yaml
+          f.write {"steem" => {}}.to_yaml
         end
         {}
       end

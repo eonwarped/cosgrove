@@ -29,14 +29,14 @@ module Cosgrove
         return
       end
       
-      votes_today = SteemApi::Tx::Vote.where(voter: steem_account).today
-      today_count = votes_today.count
-      author_count = votes_today.where(author: author_name).count
-      vote_ratio = if today_count == 0
-        0.0
-      else
-        author_count.to_f / today_count
-      end
+      #votes_today = SteemApi::Tx::Vote.where(voter: steem_account).today
+      #today_count = votes_today.count
+      #author_count = votes_today.where(author: author_name).count
+      #vote_ratio = if today_count == 0
+      #  0.0
+      #else
+      #  author_count.to_f / today_count
+      #end
       
       created ||= post.created
       cashout_time ||= post.cashout_time
@@ -55,8 +55,8 @@ module Cosgrove
       
       nope = if created > 1.minute.ago
         "Give it a second!  It's going to SPACE!  Can you give it a second to come back from space?"
-      elsif created > 20.minutes.ago
-        "Unable to vote.  Please wait 20 minutes before voting."
+      elsif created > 10.minutes.ago
+        "Unable to vote.  Please wait 10 minutes before voting."
       elsif cashout_time < Time.now.utc
         'Unable to vote on that.  Too old.'
       elsif post.parent_permlink == 'nsfw'
@@ -77,12 +77,12 @@ module Cosgrove
       elsif !root_post && channel_disable_comment_voting(event.channel.id)
         puts "Won't vote because comment voting is disabled."
         'Unable to vote.'
-      elsif !registered
-        'Unable to vote.  Feature resticted to registered users.'
-      elsif cb_account.novote?
-        'Unable to vote.  Your account has been resticted.'
-      elsif today_count > 10 && vote_ratio > 0.1
-        "Maybe later.  It seems like I've been voting for #{author_name} quite a bit lately."
+      #elsif !registered
+      #  'Unable to vote.  Feature resticted to registered users.'
+      #elsif cb_account.novote?
+      #  'Unable to vote.  Your account has been resticted.'
+      #elsif today_count > 10 && vote_ratio > 0.1
+      #  "Maybe later.  It seems like I've been voting for #{author_name} quite a bit lately."
       elsif active_votes.map{ |v| v['voter'] }.include?(steem_account)
         title = post.title
         title = post.permlink if title.empty?

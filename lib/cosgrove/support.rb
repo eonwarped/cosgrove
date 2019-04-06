@@ -16,7 +16,7 @@ module Cosgrove
     def unknown_account(account_name, event = nil)
       help = ["Unknown account: *#{account_name}*"]
       event.channel.start_typing if !!event
-      guess = suggest_account_name(account_name)
+      guess = nil
 
       help << ", did you mean: #{guess}?" if !!guess
       
@@ -57,20 +57,22 @@ module Cosgrove
         end
       end
       
-      posts = case chain
-      when :steem then SteemApi::Comment.where(author: author_name, permlink: permlink)
-      end
-      
-      posts.select(:ID, :created, :cashout_time, :author, :permlink, :active_votes, :children)
-      
-      post = posts.last
+      #posts = case chain
+      #when :steem then SteemApi::Comment.where(author: author_name, permlink: permlink)
+      #end
+      #
+      #posts.select(:ID, :created, :cashout_time, :author, :permlink, :active_votes, :children)
+      #
+      #post = posts.last
+      post = nil
       
       if post.nil?
         # Fall back to RPC
         api(chain).get_content(author_name, permlink) do |content, errors|
           unless content.author.empty?
-            created = Time.parse(content.created + 'Z')
-            cashout_time = Time.parse(content.cashout_time + 'Z')
+            post = content;
+            post.created = Time.parse(content.created + 'Z')
+            post.cashout_time = Time.parse(content.cashout_time + 'Z')
           end
         end
       end
@@ -95,8 +97,11 @@ module Cosgrove
       end
       message = message.edit details.join('; ') if !!message
       
-      active_votes = JSON[post.active_votes] rescue []
-      
+      #active_votes = JSON[post.active_votes] rescue []
+      active_votes = post.active_votes
+     
+      #puts active_votes
+ 
       if active_votes.any?
         upvotes = active_votes.map{ |v| v if v['weight'].to_i > 0 }.compact.count
         downvotes = active_votes.map{ |v| v if v['weight'].to_i < 0 }.compact.count
@@ -105,18 +110,18 @@ module Cosgrove
         message = message.edit details.join('; ') if !!message
         
         # Only append this detail of the post less than an hour old.
-        if created > 1.hour.ago
-          votes = case chain
-          when :steem then SteemApi::Tx::Vote.where('timestamp > ?', post.created)
-          end
-          total_votes = votes.distinct("concat(author, permlink)").count
-          total_voters = votes.distinct(:voter).count
-            
-          if total_votes > 0 && total_voters > 0
-            details << "Out of #{pluralize(total_votes - netvotes, 'vote')} cast by #{pluralize(total_voters, 'voter')}"
-            message = message.edit details.join('; ') if !!message
-          end
-        end
+        #if created > 1.hour.ago
+        #  votes = case chain
+        #  when :steem then SteemApi::Tx::Vote.where('timestamp > ?', post.created)
+        #  end
+        #  total_votes = votes.distinct("concat(author, permlink)").count
+        #  total_voters = votes.distinct(:voter).count
+        #    
+        #  if total_votes > 0 && total_voters > 0
+        #    details << "Out of #{pluralize(total_votes - netvotes, 'vote')} cast by #{pluralize(total_voters, 'voter')}"
+        #    message = message.edit details.join('; ') if !!message
+        #  end
+        #end
       end
       
       details << "Comments: #{post.children.to_i}"
@@ -135,12 +140,13 @@ module Cosgrove
       chain = chain.to_sym
       
       raise "Required argument: chain" if chain.nil?
-      
-      if chain == :steem
-        account = if (accounts = SteemApi::Account.where(name: key)).any?
-          accounts.first
-        end
-      end
+     
+      account = nil 
+      #if chain == :steem
+      #  account = if (accounts = SteemApi::Account.where(name: key)).any?
+      #    accounts.first
+      #  end
+      #end
       
       if account.nil?
         account = if !!(cb_account = Cosgrove::Account.find_by_discord_id(key, chain))
@@ -150,7 +156,7 @@ module Cosgrove
       
       if account.nil?
         account = if !!key
-          if chain == :steem && (accounts = SteemApi::Account.where(name: key)).any?
+          if false && chain == :steem && (accounts = SteemApi::Account.where(name: key)).any?
             accounts.first
           else
             # Fall back to RPC

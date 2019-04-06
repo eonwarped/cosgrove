@@ -156,27 +156,28 @@ module Cosgrove
       author_name = options[:author_name]
       permlink = options[:permlink]
       parent_permlink = options[:parent_permlink]
-      
-      post = if chain == :steem
-        posts = SteemApi::Comment.where(depth: 0, author: author_name)
-        posts = posts.where(permlink: permlink) if !!permlink
-        posts = posts.where(parent_permlink: parent_permlink) if !!parent_permlink
-        
-        posts.first
-      end
-      
-      if post.nil?
-        post = case chain
-        when :steem
-          posts = SteemApi::Comment.where(author: author_name)
-          posts = posts.where(permlink: permlink) if !!permlink
-          posts = posts.where(parent_permlink: parent_permlink) if !!parent_permlink
-          
-          posts.first
-        end
-      end
-      
-      if post.nil? && !!author_name && !!permlink
+       
+      #post = if chain == :steem
+      #  posts = SteemApi::Comment.where(depth: 0, author: author_name)
+      #  posts = posts.where(permlink: permlink) if !!permlink
+      #  posts = posts.where(parent_permlink: parent_permlink) if !!parent_permlink
+      #  
+      #  posts.first
+      #end
+      #
+      #if post.nil?
+      #  post = case chain
+      #  when :steem
+      #    posts = SteemApi::Comment.where(author: author_name)
+      #    posts = posts.where(permlink: permlink) if !!permlink
+      #    posts = posts.where(parent_permlink: parent_permlink) if !!parent_permlink
+      #    
+      #    posts.first
+      #  end
+      #end
+     
+      post = nil 
+      if !!author_name && !!permlink
         # Fall back to RPC
         api(chain).get_content(author_name, permlink) do |content, errors|
           unless content.author.empty?
@@ -211,18 +212,19 @@ module Cosgrove
       
       op = case chain
       when :steem
-        transfers = SteemApi::Tx::Transfer.
-          where(from: from, to: steem_account).
-          where("memo LIKE ?", "%#{memo_key}%")
-      
-        if transfers.any?
-          transfers.last
-        else
-          SteemApi::Tx::Transfer.
-            where(from: from).
-            where(to: to).
-            where("memo LIKE ?", "%#{memo_key}%").last
-        end
+        nil
+      #  transfers = SteemApi::Tx::Transfer.
+      #    where(from: from, to: steem_account).
+      #    where("memo LIKE ?", "%#{memo_key}%")
+      #
+      #  if transfers.any?
+      #    transfers.last
+      #  else
+      #    SteemApi::Tx::Transfer.
+      #      where(from: from).
+      #      where(to: to).
+      #      where("memo LIKE ?", "%#{memo_key}%").last
+      #  end
       end
       
       if op.nil?

@@ -38,15 +38,21 @@ module Cosgrove
     def add_all_commands
       self.command :help do |_event, *args|
         help = []
-        help << "`$slap [target]` - does a slap on the `target`"
-        help << "`$verify <account> [chain]` - check `account` association with Discord users (`chain` default `steem`)"
-        help << "`$register <account> [chain]` - associate `account` with your Discord user (`chain` default `steem`)"
-        help << "`$upvote [url]` - upvote from #{steem_account}; empty or `^` to upvote last steemit link"
+        help << "`..slap [target]` - does a slap on the `target`"
+        help << "`..verify <account> [chain]` - check `account` association with Discord users (`chain` default `steem`)"
+        help << "`..register <account> [chain]` - associate `account` with your Discord user (`chain` default `steem`)"
+        help << "`..upvote [url]` - upvote from #{steem_account}; empty or `^` to upvote last steemit link; also comments and resteems. any further text is placed in the comment."
+        help << "`..power <account>` - Check voting power of account."
         help.join("\n")
       end
       
       self.command :version do |_|
         "cosgrove: #{Cosgrove::VERSION} :: https://github.com/steem-third-party/cosgrove"
+      end
+
+      self.command :power do |event, account_name = steem_account|
+        account = find_account(account_name)
+        event.respond "Voting Power for #{account_name}: #{account.voting_power / 100.0}%"
       end
       
       self.command :verify do |event, key, chain = :steem|
@@ -54,7 +60,7 @@ module Cosgrove
         cb_account = nil
         
         if key.nil?
-          event.respond "To create an account: https://steemit.com/enter_email?r=#{steem_account}"
+          event.respond "Account to verify missing."
           return
         end
         
@@ -78,11 +84,11 @@ module Cosgrove
             "#{chain.to_s.upcase} account `#{account.name}` has been registered with #{discord_ids.to_sentence}."
           end
         elsif !!account
-          "#{chain.to_s.upcase} account `#{account.name}` has not been registered with any Discord account.  To register:\n`$register #{account.name}`"
+          "#{chain.to_s.upcase} account `#{account.name}` has not been registered with any Discord account.  To register:\n`..register #{account.name}`"
         elsif discord_id.to_i > 0
-          "<@#{discord_id}> has not been associated with a #{chain.to_s.upcase} account.  To register:\n`$register <account>`"
+          "<@#{discord_id}> has not been associated with a #{chain.to_s.upcase} account.  To register:\n`..register <account>`"
         else
-          "No association found.  To register:\n`$register <account>`"
+          "No association found.  To register:\n`..register <account>`"
         end
       end
       
@@ -127,16 +133,28 @@ module Cosgrove
           
           "Ok.  #{chain.to_s.upcase} account #{account.name} has been registered with <@#{discord_id}>."
         else
-          "To register `#{account.name}` with <@#{discord_id}>, send `0.001 #{core_asset}` or `0.001 #{debt_asset}` to `#{steem_account}` with memo: `#{memo_key}`\n\nThen type `$register #{account.name}` again."
+          "To register `#{account.name}` with <@#{discord_id}>, send `0.001 #{core_asset}` or `0.001 #{debt_asset}` to `#{steem_account}` with memo: `#{memo_key}`\n\nThen type `..register #{account.name}` again."
         end
       end
       
-      self.command(:upvote, bucket: :voting, rate_limit_message: 'Sorry, you are in cool-down.  Please wait %time% more seconds.') do |event, slug = nil|
+      self.command(:upvote, bucket: :voting, rate_limit_message: 'Sorry, you are in cool-down.  Please wait %time% more seconds.') do |event, slug, *args|
         return if event.channel.pm? && !cosgrove_allow_pm_commands
-        
+       
+        discord_id = event.author.id
+        cb_account = Cosgrove::Account.find_by_discord_id(discord_id)
+        account_name = nil
+        account_name = cb_account.chain_account.name if !!cb_account && !!cb_account.chain_account
+
         slug = Cosgrove::latest_steemit_link[event.channel.name] if slug.nil? || slug.empty? || slug == '^'
+        custom_message = args.join(' ')
+        if !!account_name
+          custom_message += "\nManually curated by @#{account_name}."
+        end
         options = {
-          on_success: @on_success_upvote_job
+          on_success: lambda { |event, slug|
+             @on_success_upvote_job.call(event, slug, custom_message)
+             puts "CURATE,#{discord_id},#{account_name},#{slug}"
+          }
         }
 
         Cosgrove::UpvoteJob.new(options).perform(event, slug)
