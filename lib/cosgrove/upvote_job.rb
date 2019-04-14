@@ -112,6 +112,7 @@ module Cosgrove
           response = tx.process(true)
         rescue => e
           puts "Unable to vote: #{e}"
+	  puts e.backtrace
           ap e
         end
         

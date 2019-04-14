@@ -137,7 +137,7 @@ module Cosgrove
         end
       end
       
-      self.command(:upvote, bucket: :voting, rate_limit_message: 'Sorry, you are in cool-down.  Please wait %time% more seconds.') do |event, slug, *args|
+      self.command(:upvote) do |event, slug, *args|
         return if event.channel.pm? && !cosgrove_allow_pm_commands
        
         discord_id = event.author.id

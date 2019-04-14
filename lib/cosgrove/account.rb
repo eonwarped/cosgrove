@@ -106,7 +106,7 @@ module Cosgrove
       else
         # Initialize
         File.open(ACCOUNTS_FILE, 'w+') do |f|
-          f.write {"steem" => {}}.to_yaml
+          f.write({"steem" => {}}.to_yaml)
         end
         {}
       end

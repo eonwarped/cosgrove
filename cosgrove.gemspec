@@ -27,7 +27,7 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'simplecov', '~> 0.11', '>= 0.11.2'
   spec.add_development_dependency 'yard', '~> 0.9', '>= 0.9.16'
 
-  spec.add_dependency 'radiator', '~> 0.4', '>= 0.4.3'
+  spec.add_dependency 'radiator', '~> 0.4', '>= 0.4.5'
   spec.add_dependency 'steem_api', '~> 1.1', '>= 1.1.2'
   spec.add_dependency 'discordrb', '~> 3.2', '>= 3.2.1'
   spec.add_dependency 'ai4r', '~> 1.13', '>= 1.13'
