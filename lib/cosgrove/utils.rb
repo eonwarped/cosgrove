@@ -114,11 +114,19 @@ module Cosgrove
       case slug
       when /^latest:/ then find_author_name_permlink(slug)
       when /^first:/ then find_author_name_permlink(slug)
+      when /partiko\.app\// then
+        slug = slug.split("partiko.app/").last
+        author_name = slug.split('/')[0]
+	author_name = author_name.split('@').last
+        permlink = slug.split('/')[1..-1].join('/')
+        permlink = permlink.split('?')[0]
+
+        [author_name, permlink]
       else
+	slug = slug.split('#')[0]
         slug = slug.split('@').last
         author_name = slug.split('/')[0]
         permlink = slug.split('/')[1..-1].join('/')
-        permlink = permlink.split('#')[0]
         
         [author_name, permlink]
       end
