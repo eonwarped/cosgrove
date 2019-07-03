@@ -153,7 +153,9 @@ module Cosgrove
         options = {
           on_success: lambda { |event, slug|
              @on_success_upvote_job.call(event, slug, custom_message)
-             puts "CURATE,#{discord_id},#{account_name},#{slug}"
+	     open('curated.csv', 'a') { |f|
+	       f.puts "CURATE,#{Time.now.getutc},#{discord_id},#{account_name},#{slug}"
+	     }
           }
         }
 
