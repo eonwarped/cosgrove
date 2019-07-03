@@ -136,8 +136,8 @@ module Cosgrove
           "To register `#{account.name}` with <@#{discord_id}>, send `0.001 #{core_asset}` or `0.001 #{debt_asset}` to `#{steem_account}` with memo: `#{memo_key}`\n\nThen type `..register #{account.name}` again."
         end
       end
-      
-      self.command(:upvote) do |event, slug, *args|
+     
+      def doUpvote(event, language, slug, *args)
         return if event.channel.pm? && !cosgrove_allow_pm_commands
        
         discord_id = event.author.id
@@ -147,12 +147,9 @@ module Cosgrove
 
         slug = Cosgrove::latest_steemit_link[event.channel.name] if slug.nil? || slug.empty? || slug == '^'
         custom_message = args.join(' ')
-        if !!account_name
-          custom_message += "\nManually curated by @#{account_name}."
-        end
         options = {
           on_success: lambda { |event, slug|
-             @on_success_upvote_job.call(event, slug, custom_message)
+             @on_success_upvote_job.call(event, slug, custom_message, language)
 	     open('curated.csv', 'a') { |f|
 	       f.puts "CURATE,#{Time.now.getutc},#{discord_id},#{account_name},#{slug}"
 	     }
@@ -160,7 +157,16 @@ module Cosgrove
         }
 
         Cosgrove::UpvoteJob.new(options).perform(event, slug)
+      end 
+
+      self.command(:upvote) do |event, slug, *args|
+        doUpvote(event, 'english', slug, *args)
       end
+
+      self.command(:vota) do |event, slug, *args|
+        doUpvote(event, 'spanish', slug, *args)
+      end
+
     end
   end
 end
