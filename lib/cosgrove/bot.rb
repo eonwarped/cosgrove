@@ -19,7 +19,7 @@ module Cosgrove
       @on_success_upvote_job = options[:on_success_upvote_job]
       @on_success_register_job = options[:on_success_register_job]
       
-      self.bucket :voting, limit: 4, time_span: 8640, delay: 10
+      self.bucket :voting, limit: 10, time_span: 60*60*24, delay: 10
 
       add_all_commands
       add_all_messages
@@ -53,6 +53,14 @@ module Cosgrove
       self.command :power do |event, account_name = steem_account|
         account = find_account(account_name)
         event.respond "Voting Power for #{account_name}: #{account.voting_power / 100.0}%"
+      end
+
+      self.command :upvote_queue do |event|
+	      response = "Queue: \n"
+	      Cosgrove::UpvoteJob::upvote_queue.each_with_index do |x, i|
+		      response += "#{i+1}. #{x[:vote][:author]}/#{x[:vote][:permlink]}\n"
+	      end
+	      event.respond(response)
       end
       
       self.command :verify do |event, key, chain = :steem|
@@ -159,11 +167,11 @@ module Cosgrove
         Cosgrove::UpvoteJob.new(options).perform(event, slug)
       end 
 
-      self.command(:upvote) do |event, slug, *args|
+      self.command(:upvote, bucket: :voting, rate_limit_message: 'Sorry, you are in cool-down. Please wait %time% more seconds.') do |event, slug, *args|
         doUpvote(event, 'english', slug, *args)
       end
 
-      self.command(:vota) do |event, slug, *args|
+      self.command(:vota, bucket: :voting, rate_limit_message: 'Sorry, you are in cool-down. Please wait %time% more seconds.') do |event, slug, *args|
         doUpvote(event, 'spanish', slug, *args)
       end
 
