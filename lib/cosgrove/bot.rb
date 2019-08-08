@@ -19,7 +19,7 @@ module Cosgrove
       @on_success_upvote_job = options[:on_success_upvote_job]
       @on_success_register_job = options[:on_success_register_job]
       
-      self.bucket :voting, limit: 4, time_span: 8640, delay: 10
+      self.bucket :voting, limit: 10, time_span: 60*60*24, delay: 10
 
       add_all_commands
       add_all_messages
@@ -53,6 +53,14 @@ module Cosgrove
       self.command :power do |event, account_name = steem_account|
         account = find_account(account_name)
         event.respond "Voting Power for #{account_name}: #{account.voting_power / 100.0}%"
+      end
+
+      self.command :upvote_queue do |event|
+	      response = "Queue: \n"
+	      Cosgrove::UpvoteJob::upvote_queue.each_with_index do |x, i|
+		      response += "#{i+1}. #{x[:vote][:author]}/#{x[:vote][:permlink]}\n"
+	      end
+	      event.respond(response)
       end
       
       self.command :verify do |event, key, chain = :steem|
@@ -136,8 +144,8 @@ module Cosgrove
           "To register `#{account.name}` with <@#{discord_id}>, send `0.001 #{core_asset}` or `0.001 #{debt_asset}` to `#{steem_account}` with memo: `#{memo_key}`\n\nThen type `..register #{account.name}` again."
         end
       end
-      
-      self.command(:upvote) do |event, slug, *args|
+     
+      def doUpvote(event, language, slug, *args)
         return if event.channel.pm? && !cosgrove_allow_pm_commands
        
         discord_id = event.author.id
@@ -147,12 +155,9 @@ module Cosgrove
 
         slug = Cosgrove::latest_steemit_link[event.channel.name] if slug.nil? || slug.empty? || slug == '^'
         custom_message = args.join(' ')
-        if !!account_name
-          custom_message += "\nManually curated by @#{account_name}."
-        end
         options = {
           on_success: lambda { |event, slug|
-             @on_success_upvote_job.call(event, slug, custom_message)
+             @on_success_upvote_job.call(event, slug, custom_message, language)
 	     open('curated.csv', 'a') { |f|
 	       f.puts "CURATE,#{Time.now.getutc},#{discord_id},#{account_name},#{slug}"
 	     }
@@ -160,7 +165,16 @@ module Cosgrove
         }
 
         Cosgrove::UpvoteJob.new(options).perform(event, slug)
+      end 
+
+      self.command(:upvote, bucket: :voting, rate_limit_message: 'Sorry, you are in cool-down. Please wait %time% more seconds.') do |event, slug, *args|
+        doUpvote(event, 'english', slug, *args)
       end
+
+      self.command(:vota, bucket: :voting, rate_limit_message: 'Sorry, you are in cool-down. Please wait %time% more seconds.') do |event, slug, *args|
+        doUpvote(event, 'spanish', slug, *args)
+      end
+
     end
   end
 end

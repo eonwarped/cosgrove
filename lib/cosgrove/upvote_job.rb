@@ -3,7 +3,11 @@ module Cosgrove
     include Utils
     include Support
     include Config
-    
+
+    cattr_accessor :upvote_queue
+
+    @@upvote_queue = []
+
     def initialize(options = {})
       @on_success = options[:on_success]
     end
@@ -93,7 +97,12 @@ module Cosgrove
         event.respond nope
         return
       end
-      
+     
+      # Logic: Add to queue (if not already too many), and respond that it was added.
+      # Process queue.
+  
+      # Check that discord_id has no more than X pending in queue.
+
       vote = {
         type: :vote,
         voter: steem_account,
@@ -102,8 +111,59 @@ module Cosgrove
         weight: upvote_weight(event.channel.id)
       }
 
+      vote_action = {
+	discord_id: discord_id,
+	post: post,
+        vote: vote,
+	event: event,
+	on_success: @on_success,
+      }
+
+      Cosgrove::UpvoteJob::upvote_queue.push( vote_action )
+      puts "Queue,#{vote_action[:vote][:author]},#{vote_action[:vote][:permlink]}\n"
+      response = "Added to queue.\n"
+      response += process_queue
+      event.respond(response)
+    end
+
+    def process_queue()
+	    response = ""
+	    loop do
+		    break if upvote_queue.empty?
+		    vote_action = Cosgrove::UpvoteJob::upvote_queue.shift
+
+		    if vp_too_low?
+			    response += "VP low. Waiting to recover before processing more votes.\n"
+			    Cosgrove::UpvoteJob::upvote_queue.unshift(vote_action)
+			    break
+		    end
+
+		    begin
+			    response += process_vote_action(vote_action)
+		    rescue => e
+			    ap e
+			    ap e.backtrace
+			    response += "Error processing.\n"
+			    Cosgrove::UpvoteJob::upvote_queue.unshift(vote_action)
+			    break
+		    end
+
+		    break if upvote_queue.empty?
+		    sleep 20
+	    end
+	    response
+    end
+
+    def vp_too_low?
+	    account = find_account('helpie')
+	    (account.voting_power / 100.0) < 80.0
+    end
+
+    def process_vote_action(vote_action)
+	    channel_response = "Processing vote for #{vote_action[:vote][:author]}/#{vote_action[:vote][:permlink]}\n"
+
       tx = new_tx :steem
-      tx.operations << vote
+      tx.operations << vote_action[:vote]
       friendy_error = nil
       response = nil
       
@@ -157,23 +217,24 @@ module Cosgrove
       end
 
       if !!friendy_error
-        friendy_error
+	      channel_response += friendy_error + "\n"
       elsif !!response.result.id
         ap response.to_json
 
-        if !!@on_success
+        if !!vote_action[:on_success]
           begin
-            @on_success.call(event, "@#{post.author}/#{post.permlink}")
+            vote_action[:on_success].call(vote_action[:event], "@#{vote_action[:vote][:author]}/#{vote_action[:vote][:permlink]}")
           rescue => e
             ap e
             ap e.backtrace
           end
         end
         
-        "Upvoted: #{post.title} by #{author_name}"
+	channel_response += "Upvoted: #{vote_action[:post].title} by #{vote_action[:vote][:author]}\n"
       else
-        ':question:'
+	channel_response += ":question:\n"
       end
+      channel_response
     end
   private
     def upvote_weight(channel_id = nil)
