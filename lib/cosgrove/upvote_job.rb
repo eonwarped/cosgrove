@@ -57,11 +57,7 @@ module Cosgrove
         post.active_votes
       end
       
-      nope = if created > 1.minute.ago
-        "Give it a second!  It's going to SPACE!  Can you give it a second to come back from space?"
-      elsif created > 10.minutes.ago
-        "Unable to vote.  Please wait 10 minutes before voting."
-      elsif cashout_time < Time.now.utc
+      nope = if cashout_time < Time.now.utc
         'Unable to vote on that.  Too old.'
       elsif post.parent_permlink == 'nsfw'
         puts "Won't vote because parent_permlink: nsfw"

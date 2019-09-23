@@ -19,7 +19,7 @@ module Cosgrove
       @on_success_upvote_job = options[:on_success_upvote_job]
       @on_success_register_job = options[:on_success_register_job]
       
-      self.bucket :voting, limit: 10, time_span: 60*60*24, delay: 10
+      self.bucket :voting, limit: 12, time_span: 60*60*24, delay: 10
 
       add_all_commands
       add_all_messages
