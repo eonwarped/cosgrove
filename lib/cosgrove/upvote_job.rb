@@ -151,7 +151,7 @@ module Cosgrove
     end
 
     def vp_too_low?
-	    account = find_account('helpie')
+	    account = find_account('helpiecake')
 	    (account.voting_power / 100.0) < 80.0
     end
 

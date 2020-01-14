@@ -4,7 +4,8 @@ require 'yaml'
 require 'action_view'
 require 'radiator'
 require 'awesome_print'
-require 'steem_api'
+require 'timerizer'
+#require 'steem_api'
 # require 'pry' # for binding.pry
 
 Bundler.require
